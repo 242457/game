@@ -15,6 +15,11 @@ int gamestart(int* score)
 		user_output(0);
 		std::string type_s;
 		std::cin>>type_s;
+		if(std::cin.eof())
+		{
+			std::cout<<"\nexit...\n";
+			break;
+		}
 		int flag=is_all_digit(type_s);
 		if(flag==0)
 		{
