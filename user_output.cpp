@@ -13,7 +13,7 @@ int user_output(int token)
 	}
 	else if(token==2)
 	{
-		std::cout<<"\033[1;30;42myou will meet a monster , try hard to kill it.\n\033[0m";
+		std::cout<<"\033[1;30;42myou will meet a monster , try hard to kill it.\033[0m\n";
 		return 0;
 	}
 	else
