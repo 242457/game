@@ -1,4 +1,6 @@
 name: Build & Release Binaries
+permissions:
+  contents: write
 
 on:
   push:
@@ -148,12 +150,13 @@ jobs:
           VERSION=$(find ./assets -name version.txt | head -n1 | xargs cat)
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Upload binaries to Release
+      - name: Create Release on existing tag
         uses: softprops/action-gh-release@v2
         with:
           files: ./assets/**/*
           overwrite: false
           append_body: false
           tag_name: ${{ steps.get_release_ver.outputs.VERSION }}
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
