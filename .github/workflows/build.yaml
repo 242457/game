@@ -71,6 +71,7 @@ jobs:
 
       - name: Extract version from tag
         id: get_version
+        shell: bash
         run: |
           if [[ -n "${{ github.event.inputs.tag_name }}" ]]; then
             echo "VERSION=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
@@ -80,6 +81,7 @@ jobs:
 
       # 把版本号保存成文件，给release job读取
       - name: Save version to file
+        shell: bash
         run: echo "${{ steps.get_version.outputs.VERSION }}" > version.txt
 
       # 安装 CMake (Linux / MacOS)
@@ -102,13 +104,8 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release
-          if [[ "$OSTYPE" == "darwin"* ]]; then
-            JOBS=$(sysctl -n hw.ncpu)
-          else
-            JOBS=$(nproc)
-          fi
-          cmake --build . -j${JOBS}
+          cmake ..
+          cmake --build . --config Release -j2
 
       - name: Locate & Rename binary
         shell: bash
@@ -145,6 +142,7 @@ jobs:
 
       - name: Read version from artifact
         id: get_release_ver
+        shell: bash
         run: |
           # 任意一个artifact里都有version.txt，取第一个
           VERSION=$(find ./assets -name version.txt | head -n1 | xargs cat)
