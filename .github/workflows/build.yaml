@@ -1,0 +1,143 @@
+name: Build & Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: '要编译的Tag名称（例如 v1.0.0），用于补旧版本二进制'
+        required: true
+        type: string
+
+jobs:
+  check_tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag_ok: ${{ steps.check.outputs.tag_exists }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Check tag exists
+        id: check
+        run: |
+          TAG="${{ github.event.inputs.tag_name || github.ref_name }}"
+          if git rev-parse "tags/$TAG" >/dev/null 2>&1; then
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+            echo "ERROR: Tag '$TAG' does NOT exist on remote!"
+            exit 1
+          fi
+
+  build:
+    needs: check_tag
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            os_name: linux
+            arch: x86_64
+          - os: windows-latest
+            os_name: windows
+            arch: x86_64
+          - os: macos-latest
+            os_name: macos
+            arch: x86_64
+          - os: macos-14
+            os_name: macos
+            arch: arm64
+
+    steps:
+      - name: Checkout specified tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag_name || github.ref_name }}
+
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          if [[ -n "${{ github.event.inputs.tag_name }}" ]]; then
+            echo "VERSION=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      # 把版本号保存成文件，给release job读取
+      - name: Save version to file
+        run: echo "${{ steps.get_version.outputs.VERSION }}" > version.txt
+
+      - name: Setup CMake
+        uses: lukaprelic/setup-cmake@v1
+        if: matrix.os != 'windows-latest'
+
+      - name: Setup MSVC (Windows)
+        uses: ilammy/msvc-dev-cmd@v1
+        if: matrix.os == 'windows-latest'
+
+      - name: Build C++ project
+        shell: bash
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            JOBS=$(sysctl -n hw.ncpu)
+          else
+            JOBS=$(nproc)
+          fi
+          cmake --build . -j${JOBS}
+
+      - name: Locate & Rename binary
+        shell: bash
+        run: |
+          BIN_BASE="game-${{ steps.get_version.outputs.VERSION }}-${{ matrix.os_name }}-${{ matrix.arch }}"
+          if [[ "${{ matrix.os_name }}" == "windows" ]]; then
+            BIN_NAME="${BIN_BASE}.exe"
+            EXE=$(find build -name "game.exe" | head -n1)
+            cp "${EXE}" ./${BIN_NAME}
+          else
+            BIN_NAME="${BIN_BASE}"
+            cp build/game ./${BIN_NAME}
+          fi
+          echo "BIN_FILE=${BIN_NAME}" >> $GITHUB_ENV
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os_name }}-${{ matrix.arch }}
+          path: |
+            ${{ env.BIN_FILE }}
+            version.txt
+
+  release:
+    needs: [check_tag, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./assets
+
+      - name: Read version from artifact
+        id: get_release_ver
+        run: |
+          # 任意一个artifact里都有version.txt，取第一个
+          VERSION=$(find ./assets -name version.txt | head -n1 | xargs cat)
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Upload binaries to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./assets/**/*
+          overwrite: false
+          append_body: false
+          tag_name: ${{ steps.get_release_ver.outputs.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
