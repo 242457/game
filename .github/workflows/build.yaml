@@ -33,7 +33,7 @@ jobs:
             exit 1
           fi
 
-  build:
+  BUILD:
     needs: check_tag
     runs-on: ${{ matrix.os }}
     strategy:
@@ -43,15 +43,24 @@ jobs:
           - os: ubuntu-latest
             os_name: linux
             arch: x86_64
+          - os: ubuntu-24.04-arm
+            os_name: linux
+            arch: aarch64
           - os: windows-latest
             os_name: windows
             arch: x86_64
+          - os: windows-11-arm
+            os_name: windows
+            arch: aarch64
           - os: macos-latest
             os_name: macos
-            arch: x86_64
+            arch: arm64
           - os: macos-14
             os_name: macos
             arch: arm64
+          - os: macos-15-intel
+            os_name: macos
+            arch: x86_64
 
     steps:
       - name: Checkout specified tag
@@ -73,13 +82,20 @@ jobs:
       - name: Save version to file
         run: echo "${{ steps.get_version.outputs.VERSION }}" > version.txt
 
-      - name: Setup CMake
-        uses: lukaprelic/setup-cmake@v1
-        if: matrix.os != 'windows-latest'
+      # 安装 CMake (Linux / MacOS)
+      - name: Install CMake (Linux / MacOS)
+        if: matrix.os != 'windows-latest' && matrix.os != 'windows-11-arm'
+        shell: bash
+        run: |
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            brew install cmake
+          else
+            sudo apt update && sudo apt install -y cmake
+          fi
 
-      - name: Setup MSVC (Windows)
+      - name: Setup MSVC (Windows x86_64 + Windows aarch64)
         uses: ilammy/msvc-dev-cmd@v1
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-latest' || matrix.os == 'windows-11-arm'
 
       - name: Build C++ project
         shell: bash
@@ -117,8 +133,10 @@ jobs:
             version.txt
 
   release:
-    needs: [check_tag, build]
+    needs: [check_tag, BUILD]
     runs-on: ubuntu-latest
+    # 只要至少有部分平台编译成功，就上传产物
+    if: success() || failure()
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
