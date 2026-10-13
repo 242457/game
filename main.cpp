@@ -1,5 +1,6 @@
 # include<iostream>
 # include<string>
+bool enableAnsiVT();
 std::string load();
 void save(int score);
 int gamestart(int* score);
@@ -7,6 +8,7 @@ int is_all_digit(std::string s);
 int error(int token);
 int main()
 {
+	enableAnsiVT();
 	int score=10;
 	std::string score_s=load();
 	int flag=is_all_digit(score_s);
@@ -34,12 +36,12 @@ int main()
 		try_time++;
 		if(try_time>=all_time)
 		{
-			std::cout<<"\033[31mno mour try time\nexit...\n\033[0m";
+			std::cout<<"\033[31mno more try time\nexit...\n\033[0m";
 			return 1;
 		}
 		else
 		{
-			std::cout<<"you hvae only "<<all_time-try_time<<"try chance\n";
+			std::cout<<"you have only "<<all_time-try_time<<"try chance\n";
 			goto again;
 		}
 	}
