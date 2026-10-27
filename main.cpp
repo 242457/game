@@ -4,33 +4,27 @@ bool enableAnsiVT();
 std::string load();
 void save(int score);
 int gamestart(int* score);
-int is_all_digit(std::string s);
+std::string load();
 int error(int token);
 int main()
 {
 	enableAnsiVT();
-	int score=10;
+	int score;
 	std::string score_s=load();
-	int flag=is_all_digit(score_s);
-	if(flag==0)
-	{
-		score=stoi(score_s);
-	}
-	else if(flag==1)
-	{
-		error(2);
-	}
-	else if(flag==2)
-	{
-		error(3);
-	}
+	score=stoi(score_s);
 	std::cout<<"\033[2J\033[H";
 	int try_time=0;
 	int all_time=3;
 	again:
+	std::cin.clear();
 	std::cout<<"Please input password:";
 	std::string password;
 	std::cin>>password;
+	if(std::cin.eof())
+	{
+		std::cout<<"\nexit...\n";
+		return 1;
+	}
 	if(password!="game")
 	{
 		try_time++;
@@ -41,7 +35,7 @@ int main()
 		}
 		else
 		{
-			std::cout<<"you have only "<<all_time-try_time<<"try chance\n";
+			std::cout<<"you have only "<<all_time-try_time<<" try chance\n";
 			goto again;
 		}
 	}
