@@ -7,13 +7,20 @@ int gamestart(int* score);
 int error(int token);
 int main()
 {
-	enableAnsiVT();
-	int score=10;
+	if(!enableAnsiVT())
+	{
+		std::cout<<"your windows device don't support ASIN Windows VT";
+	}
+	int score;
 	try
 	{
 		score=stoi(load());
 	}
-	catch(const std::invalid_argument&)
+	catch(const std::exception&)
+	{
+		score=10;
+	}
+	if(score<0)
 	{
 		score=10;
 	}
