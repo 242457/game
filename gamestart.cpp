@@ -5,7 +5,7 @@ int error(int token);
 int ground(int* score);
 int gamestart(int* score)
 {
-	std::cout<<"\033[2J\033[Hhello\n";
+	std::cout<<"\n\033[2J\033[Hhello\n";
 	while (true)
 	{
 		std::cin.clear();

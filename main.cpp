@@ -4,20 +4,25 @@ bool enableAnsiVT();
 std::string load();
 void save(int score);
 int gamestart(int* score);
-std::string load();
 int error(int token);
 int main()
 {
 	enableAnsiVT();
-	int score;
-	std::string score_s=load();
-	score=stoi(score_s);
+	int score=10;
+	try
+	{
+		score=stoi(load());
+	}
+	catch(const std::invalid_argument&)
+	{
+		score=10;
+	}
 	std::cout<<"\033[2J\033[H";
 	int try_time=0;
 	int all_time=3;
 	again:
 	std::cin.clear();
-	std::cout<<"Please input password:";
+	std::cout<<"\nPlease input password:";
 	std::string password;
 	std::cin>>password;
 	if(std::cin.eof())
@@ -30,15 +35,16 @@ int main()
 		try_time++;
 		if(try_time>=all_time)
 		{
-			std::cout<<"\033[31mno more try time\nexit...\n\033[0m";
+			std::cout<<"\n\033[31mno more try time\nexit...\n\033[0m\n";
 			return 1;
 		}
 		else
 		{
-			std::cout<<"you have only "<<all_time-try_time<<" try chance\n";
+			std::cout<<"\nyou have only "<<all_time-try_time<<" try chances\n";
 			goto again;
 		}
 	}
 	gamestart(&score);
 	save(score);
+	return 0;
 }
